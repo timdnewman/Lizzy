@@ -70,8 +70,11 @@ class Solver:
                 raise KeyError(f"Mesh does not contain physical tag: {inlet.physical_tag}")
             dirichlet_idx.append(inlet_idx)
             dirichlet_vals.append(np.ones(len(inlet_idx)) * inlet.p_value)
+        print(np.array(dirichlet_idx))
+        print(torch.tensor(np.array(dirichlet_idx)))
+        print(torch.tensor(np.array(dirichlet_idx)).numpy())
         self.bcs.dirichlet_idx = torch.tensor(np.array(dirichlet_idx))
-        self.bcs.dirichlet_vals = torch.tensor(np.array(dirichlet_vals))
+        self.bcs.dirichlet_vals = np.array(dirichlet_vals)
 
     def update_empty_nodes_idx(self):
         """
