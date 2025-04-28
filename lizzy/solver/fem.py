@@ -5,10 +5,11 @@
 #  You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
+import torch
 
 def Assembly(mesh, mu):
-    K_tri = np.zeros((mesh.nodes.N, mesh.nodes.N))
-    f = np.zeros((mesh.nodes.N,))
+    K_tri = torch.zeros(mesh.nodes.N, mesh.nodes.N)
+    f = torch.zeros(mesh.nodes.N)
 
     for tri in mesh.triangles:
         k_el = tri.grad_N.T @ tri.k @ tri.grad_N * tri.A * tri.h / mu

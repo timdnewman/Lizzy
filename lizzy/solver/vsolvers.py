@@ -5,6 +5,7 @@
 #  You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
+import torch
 
 class VelocitySolver:
     B = any
@@ -23,5 +24,5 @@ class VelocitySolver:
     @classmethod
     def calculate_elem_velocities(cls, p, mu):
         p_vector = p[cls.nodes_conn]
-        v_array = -(1/mu) * np.einsum('ijk,ik->ij', cls.B, p_vector) # not pretty
-        return v_array
+        v_array = -(1/mu) * torch.einsum('ijk,ik->ij', cls.B, p_vector) # not pretty
+        return torch.tensor(v_array)

@@ -5,13 +5,14 @@
 #  You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
+import torch
 import time
 from lizzy.solver import *
 from lizzy.bcond import SolverBCs
 from lizzy.simparams import ProcessParameters
 
 class Solver:
-    def __init__(self, mesh, bc_manager, solver_type=SolverType.DIRECT_SPARSE):
+    def __init__(self, mesh, bc_manager, solver_type=SolverType.DIRECT_SPARSE,device='cpu'):
         """
         The Solver object performs all FE/CV calculations to simulate the filling. Must be instantiated for a solution to be calculated.
 
@@ -35,11 +36,12 @@ class Solver:
         self.n_empty_cvs = np.inf
         self.next_wo_time = ProcessParameters.wo_delta_time
         # assembly is calculated at instantiation of the solver
-        self.perform_fe_precalcs()
+        self.perform_fe_precalcs(device)
         # when a solver is instantiated, all simulation variables are initialised
         self.initialise_new_solution()
 
-    def perform_fe_precalcs(self):
+    def perform_fe_precalcs(self,device='cpu'):
+        
         # preprocess mesh
         if not self.mesh.preprocessed:
             self.mesh.preprocess()
@@ -48,6 +50,8 @@ class Solver:
             print(f"Warning: Process parameters were not assigned. Running with default values: mu={ProcessParameters.mu}, wo_delta_time={ProcessParameters.wo_delta_time}")
         # assemble FE global matrix (singular)
         self.K_sing, self.f_orig = fe.Assembly(self.mesh, ProcessParameters.mu)
+        self.K_sing = self.K_sing.to(device)
+        self.f_orig = self.f_orig.to(device)
         # precalculate vectorised stuff for velocity
         VelocitySolver.precalculate_B(self.mesh.triangles)
 
@@ -66,15 +70,15 @@ class Solver:
                 raise KeyError(f"Mesh does not contain physical tag: {inlet.physical_tag}")
             dirichlet_idx.append(inlet_idx)
             dirichlet_vals.append(np.ones(len(inlet_idx)) * inlet.p_value)
-        self.bcs.dirichlet_idx = np.concatenate(dirichlet_idx)
-        self.bcs.dirichlet_vals = np.concatenate(dirichlet_vals)
+        self.bcs.dirichlet_idx = torch.tensor(np.array(dirichlet_idx))
+        self.bcs.dirichlet_vals = torch.tensor(np.array(dirichlet_vals))
 
     def update_empty_nodes_idx(self):
         """
         Complementary to "update_dirichlet_bcs()", this updates the indices of all nodes with a fill factor < 1.0. These will be uses to assign an internal condition p=0.
         """
         empty_node_ids = [cv.id for cv in self.mesh.CVs if cv.fill < 1]  # nodes with fill factor < 1
-        self.bcs.p0_idx = np.array(empty_node_ids)
+        self.bcs.p0_idx = np.tensor(empty_node_ids)
 
     def fill_initial_cvs(self):
         """

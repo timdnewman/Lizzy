@@ -11,10 +11,12 @@ from lizzy.solver.builtin.direct_solvers import *
 class SolverType(Enum):
     DIRECT_DENSE = auto()
     DIRECT_SPARSE = auto()
+    DIRECT_DENSE_GPU = auto()
+    DIRECT_SPARSE_GPU = auto()
 
 class PressureSolver:
     @staticmethod
-    def solve(k:np.ndarray, f:np.ndarray, method:SolverType = SolverType.DIRECT_SPARSE):
+    def solve(k:torch.tensor, f:torch.tensor, method:SolverType = SolverType.DIRECT_SPARSE):
         """
         Solve the system `K p = f`.
 
@@ -38,17 +40,20 @@ class PressureSolver:
 
     @staticmethod
     def apply_bcs(k, f, bcs):
-        dirichlet_idx_full = np.concatenate((bcs.dirichlet_idx, bcs.p0_idx), axis=None)
-        dirichlet_vals_full = np.concatenate((bcs.dirichlet_vals, np.zeros((1, len(bcs.p0_idx)))), axis=None)
+        dirichlet_idx_full = torch.cat((bcs.dirichlet_idx, bcs.p0_idx), axis=0)
+        dirichlet_vals_full = torch.cat((bcs.dirichlet_vals, torch.zeros( len(bcs.p0_idx))), axis=0)
 
         k_modified = k.copy()
         f_modified = f.copy()
 
+        k_modified[dirichlet_idx_full, :] = 0
+        k_modified[dirichlet_idx_full,dirichlet_idx_full]=1
+        f_modified[dirichlet_idx_full] = dirichlet_vals_full
         # apply bcs
-        for i, node_id in enumerate(dirichlet_idx_full):
-            k_modified[node_id, :] = 0
-            k_modified[node_id, node_id] = 1
-            f_modified[node_id] = dirichlet_vals_full[i]
+        # for i, node_id in enumerate(dirichlet_idx_full):
+        #     k_modified[node_id, :] = 0
+        #     k_modified[node_id, node_id] = 1
+        #     f_modified[node_id] = dirichlet_vals_full[i]
         return k_modified, f_modified
 
 

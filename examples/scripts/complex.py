@@ -1,7 +1,13 @@
 import lizzy as liz
+import torch
+
+if torch.cuda.is_available():
+    device = torch.device('cuda')
+else:
+    device = torch.device('cpu')
 
 # read the mesh and instantiate
-mesh_reader = liz.Reader("../meshes/Complex_rotated.msh")
+mesh_reader = liz.Reader("D:/Career/Lizzy/examples/meshes/Complex_rotated.msh")
 mesh = liz.Mesh(mesh_reader)
 
 # assign some process parameters
@@ -22,7 +28,7 @@ inlet_1 = liz.Inlet('inlet', 1E+05)
 bc_manager.add_inlet(inlet_1)
 
 # Instantiate a solver and solve
-solver = liz.Solver(mesh, bc_manager, liz.SolverType.DIRECT_SPARSE)
+solver = liz.Solver(mesh, bc_manager, liz.SolverType.DIRECT_SPARSE,device)
 solution = solver.solve(log="on")
 
 # Create a write-out object and save results

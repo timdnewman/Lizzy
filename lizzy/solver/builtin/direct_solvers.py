@@ -5,15 +5,18 @@
 #  You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
+import torch
 from scipy.linalg import solve
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 
 def solve_pressure_direct_dense(k, f):
-    p = solve(k, f)
-    return p.flatten()
+    p = torch.linalg.solve(k, f)
+    return torch.flatten(p)
 
 def solve_pressure_direct_sparse(k:np.ndarray, f:np.ndarray):
-    k_sparse = csr_matrix(k)
+    k_sparse = k.to_sparse()
     p = spsolve(k_sparse, f)
     return p
+
+
