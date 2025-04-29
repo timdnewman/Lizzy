@@ -31,7 +31,7 @@ class TimeStepManager:
         else:
             v3_nul = np.zeros((np.size(v_array,0), 1))
             v_full = np.hstack((v_array, v3_nul))
-        timestep = TimeStep(cls.time_step_count, time, dt, P, v_full, np.clip(fill_factor, 0, 1), flow_front, write_out)
+        timestep = TimeStep(cls.time_step_count, time, dt, P, v_full, np.clip([float(f) for f in fill_factor], 0, 1), flow_front, write_out)
         cls.time_steps.append(timestep)
         cls.time_step_count += 1
 

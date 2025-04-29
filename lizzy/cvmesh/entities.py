@@ -5,6 +5,7 @@
 #  You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
+import torch
 from dataclasses import dataclass, field
 
 class Node:
@@ -146,11 +147,13 @@ class CV:
 
             line1 = self.cv_lines[i][0]   # PSEUDO CODE ALL TO CHECK AND RE-WRITE
             line2 = self.cv_lines[i][1]
-            
-            n1 = line1.n
-            n2 = line2.n
+            device = v.get_device()
 
-            flux = np.dot(v.T, (-n1*line1.l + -n2*line2.l))*tri.h
+            l1 = torch.tensor(line1.l,device=device)
+            n1 = torch.tensor(line1.n,device=device)
+            l2 = torch.tensor(line2.l,device=device)
+            n2 = torch.tensor(line2.n,device=device)
+            flux = torch.dot(v.T, (-n1*l1 + -n2*l2))*tri.h
             cv_fluxe_per_s += flux
 
         return cv_fluxe_per_s

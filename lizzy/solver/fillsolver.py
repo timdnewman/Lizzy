@@ -5,6 +5,7 @@
 #  You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
+import torch
 import lizzy
 
 class FillSolver:
@@ -17,7 +18,7 @@ class FillSolver:
         active_cvs = []
         for cv in CVs:
             cv.free_surface = 0
-            if cv.fill < 1 <= np.max([c.fill for c in cv.support_CVs]):
+            if cv.fill < 1 <= torch.max(torch.tensor([c.fill for c in cv.support_CVs])):
                 cv.free_surface = 1
                 active_cvs.append(cv)
         return active_cvs
@@ -36,9 +37,10 @@ class FillSolver:
         for i, cv in enumerate(active_cvs):
             if cls.all_fluxes_per_second[i] > 0:
                 dt = ((1.00-cv.fill)*cv.vol)/cls.all_fluxes_per_second[i]
-                candidate_dts.append(dt)
-        np.array(candidate_dts)
-        dt = np.min(candidate_dts)
+                candidate_dts.append(dt.reshape(1))
+        #np.array(candidate_dts)
+        #print(candidate_dts)
+        dt = torch.min(torch.cat(candidate_dts)).item()
         return dt
 
     @classmethod

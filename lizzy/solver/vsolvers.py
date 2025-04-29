@@ -12,13 +12,14 @@ class VelocitySolver:
     nodes_conn = any
 
     @classmethod
-    def precalculate_B(cls, triangles):
+    def precalculate_B(cls, triangles,device):
 
         b_ncol = triangles[0].grad_N.shape[1]
-        cls.B = np.empty((len(triangles), 3, b_ncol), dtype=object)
+        cls.B = torch.empty((len(triangles), 3, b_ncol), dtype=torch.double).to(device)
 
         for i in range(len(triangles)):
-            cls.B[i] =  triangles[i].k.T @ triangles[i].grad_N
+            cls.B[i] =  torch.tensor(triangles[i].k.T @ triangles[i].grad_N).to(device)
+        
         cls.nodes_conn = triangles.nodes_conn_table
 
     @classmethod

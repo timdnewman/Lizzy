@@ -7,9 +7,9 @@
 import numpy as np
 import torch
 
-def Assembly(mesh, mu):
-    K_tri = torch.zeros(mesh.nodes.N, mesh.nodes.N)
-    f = torch.zeros(mesh.nodes.N)
+def Assembly(mesh, mu,device):
+    K_tri = torch.zeros(mesh.nodes.N, mesh.nodes.N,dtype=torch.double)
+    f = torch.zeros(mesh.nodes.N,dtype=torch.double)
 
     for tri in mesh.triangles:
         k_el = tri.grad_N.T @ tri.k @ tri.grad_N * tri.A * tri.h / mu
@@ -17,6 +17,6 @@ def Assembly(mesh, mu):
             for j in range(3):
                 K_tri[tri.node_ids[i], tri.node_ids[j]] += k_el[i, j]
                 
-    return K_tri, f
+    return K_tri.to(device), f.to(device)
 
 

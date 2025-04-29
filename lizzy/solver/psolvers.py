@@ -40,11 +40,12 @@ class PressureSolver:
 
     @staticmethod
     def apply_bcs(k, f, bcs):
+        dev = bcs.dirichlet_vals.get_device()
         dirichlet_idx_full = torch.cat((bcs.dirichlet_idx, bcs.p0_idx), axis=0)
-        dirichlet_vals_full = torch.cat((bcs.dirichlet_vals, torch.zeros( len(bcs.p0_idx))), axis=0)
+        dirichlet_vals_full = torch.cat((bcs.dirichlet_vals, torch.zeros( len(bcs.p0_idx),device=dev)), axis=0)
 
-        k_modified = k.copy()
-        f_modified = f.copy()
+        k_modified = torch.clone(k)
+        f_modified = torch.clone(f)
 
         k_modified[dirichlet_idx_full, :] = 0
         k_modified[dirichlet_idx_full,dirichlet_idx_full]=1

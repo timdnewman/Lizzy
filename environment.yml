@@ -1,0 +1,13 @@
+name: LizzyGPU
+channels:
+  - defaults
+dependencies:
+  - h5py
+  - matplotlib
+  - meshio==5.3.5
+  - numpy
+  - pytest
+  - python[version='>=3.10']
+  - pytorch-gpu
+  - scipy
+prefix: C:\Users\timdn\anaconda3\envs\LizzyGPU

@@ -6,17 +6,15 @@
 
 import numpy as np
 import torch
-from scipy.linalg import solve
-from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import spsolve
+
 
 def solve_pressure_direct_dense(k, f):
     p = torch.linalg.solve(k, f)
     return torch.flatten(p)
 
 def solve_pressure_direct_sparse(k:np.ndarray, f:np.ndarray):
-    k_sparse = k.to_sparse()
-    p = spsolve(k_sparse, f)
+    k_sparse = k.to_sparse_csr()
+    p = torch.sparse.spsolve(k_sparse, f)
     return p
 
 

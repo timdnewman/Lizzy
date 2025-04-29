@@ -35,10 +35,11 @@ class Solver:
         self.current_time = 0
         self.n_empty_cvs = np.inf
         self.next_wo_time = ProcessParameters.wo_delta_time
+        self.device = device
         # assembly is calculated at instantiation of the solver
         self.perform_fe_precalcs(device)
         # when a solver is instantiated, all simulation variables are initialised
-        self.initialise_new_solution()
+        self.initialise_new_solution(device)
 
     def perform_fe_precalcs(self,device='cpu'):
         
@@ -49,13 +50,11 @@ class Solver:
         if not ProcessParameters.has_been_assigned:
             print(f"Warning: Process parameters were not assigned. Running with default values: mu={ProcessParameters.mu}, wo_delta_time={ProcessParameters.wo_delta_time}")
         # assemble FE global matrix (singular)
-        self.K_sing, self.f_orig = fe.Assembly(self.mesh, ProcessParameters.mu)
-        self.K_sing = self.K_sing.to(device)
-        self.f_orig = self.f_orig.to(device)
+        self.K_sing, self.f_orig = fe.Assembly(self.mesh, ProcessParameters.mu,device)
         # precalculate vectorised stuff for velocity
-        VelocitySolver.precalculate_B(self.mesh.triangles)
+        VelocitySolver.precalculate_B(self.mesh.triangles,device)
 
-    def update_dirichlet_bcs(self):
+    def update_dirichlet_bcs(self,device):
         """
         Very important method. updates 2 arrays of matching elements:
             - the indices of the nodes where a boundary dirichlet value is applied
@@ -70,24 +69,21 @@ class Solver:
                 raise KeyError(f"Mesh does not contain physical tag: {inlet.physical_tag}")
             dirichlet_idx.append(inlet_idx)
             dirichlet_vals.append(np.ones(len(inlet_idx)) * inlet.p_value)
-        print(np.array(dirichlet_idx))
-        print(torch.tensor(np.array(dirichlet_idx)))
-        print(torch.tensor(np.array(dirichlet_idx)).numpy())
-        self.bcs.dirichlet_idx = torch.tensor(np.array(dirichlet_idx))
-        self.bcs.dirichlet_vals = np.array(dirichlet_vals)
+        self.bcs.dirichlet_idx = torch.tensor(np.concatenate(dirichlet_idx)).to(device)
+        self.bcs.dirichlet_vals = torch.tensor(np.concatenate(dirichlet_vals)).to(device)
 
-    def update_empty_nodes_idx(self):
+    def update_empty_nodes_idx(self,device):
         """
         Complementary to "update_dirichlet_bcs()", this updates the indices of all nodes with a fill factor < 1.0. These will be uses to assign an internal condition p=0.
         """
         empty_node_ids = [cv.id for cv in self.mesh.CVs if cv.fill < 1]  # nodes with fill factor < 1
-        self.bcs.p0_idx = np.tensor(empty_node_ids)
+        self.bcs.p0_idx = torch.tensor(empty_node_ids).to(device)
 
     def fill_initial_cvs(self):
         """
         Must be called AFTER calling "update_dirichlet_bcs()"
         """
-        initial_cvs = self.mesh.CVs[self.bcs.dirichlet_idx]
+        initial_cvs = self.mesh.CVs[self.bcs.dirichlet_idx.to('cpu').numpy()]
         for cv in initial_cvs:
             cv.fill = 1.0
 
@@ -97,7 +93,7 @@ class Solver:
         """
         self.n_empty_cvs = len(self.bcs.p0_idx)
 
-    def initialise_new_solution(self):
+    def initialise_new_solution(self,device):
         """
         Initialises a new solution, resetting all simulation variables. It is sufficient to call this method to reset the simulation and run again.
         """
@@ -105,9 +101,9 @@ class Solver:
         self.next_wo_time = ProcessParameters.wo_delta_time
         self.bcs = SolverBCs()
         self.mesh.EmptyCVs()
-        self.update_dirichlet_bcs()
+        self.update_dirichlet_bcs(device)
         self.fill_initial_cvs()
-        self.update_empty_nodes_idx()
+        self.update_empty_nodes_idx(device)
         self.update_n_empty_cvs()
         TimeStepManager.reset()
         TimeStepManager.save_initial_timestep(self.mesh, self.bcs)
@@ -141,7 +137,7 @@ class Solver:
             # save time step results
             TimeStepManager.save_timestep(self.current_time, dt, p, v_array, [cv.fill for cv in self.mesh.CVs], [cv.free_surface for cv in self.mesh.CVs], write_out)
             # update the empty nodes for next step
-            self.update_empty_nodes_idx()
+            self.update_empty_nodes_idx(self.device)
             # Print number of empty cvs
             self.update_n_empty_cvs()
             if log == "on":
